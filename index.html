@@ -1,142 +1,402 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>EzzyAi — Offline Science Helper</title>
-<link rel="manifest" href="manifest.json">
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js');
-  });
-}
-</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Face-Tracking Camera (3x Zoom, Non-Mirrored)</title>
 <style>
-body{
-  margin:0;
-  background:#121212;
-  color:#e6eef6;
-  font-family:'Inter',sans-serif;
-  display:flex;
-  flex-direction:column;
-  height:100vh;
-}
-header{
-  background:#1c1c1c;
-  color:white;
-  display:flex;
-  align-items:center;
-  padding:10px 16px;
-  font-weight:600;
-  font-size:18px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.4);
-}
-.logo{background:#00aaff;padding:8px 14px;border-radius:8px;margin-right:10px;font-weight:700;}
-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-#chat{
-  flex:1;
-  padding:14px;
-  overflow-y:auto;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.msg{
-  max-width:80%;
-  padding:10px 14px;
-  border-radius:14px;
-  line-height:1.4;
-  box-shadow:0 2px 6px rgba(0,0,0,0.3);
-}
-.user{align-self:flex-end;background:#00aaff;color:white;border-bottom-right-radius:6px;}
-.bot{align-self:flex-start;background:#f1f5f9;color:#071226;border-bottom-left-radius:6px;}
-footer{
-  display:flex;
-  padding:10px;
-  background:#1c1c1c;
-  box-shadow:0 -2px 6px rgba(0,0,0,0.3);
-}
-input{
-  flex:1;
-  padding:10px 12px;
-  border-radius:10px;
-  border:none;
-  font-size:15px;
-}
-button{
-  margin-left:8px;
-  background:#00aaff;
-  color:white;
-  font-weight:600;
-  border:none;
-  border-radius:10px;
-  padding:10px 16px;
-}
-.typing-dots{display:flex;gap:4px;align-items:center;}
-.dot{width:6px;height:6px;border-radius:50%;background:#ccc;opacity:0.6;animation:blink 1s infinite;}
-.dot:nth-child(2){animation-delay:0.2s;}
-.dot:nth-child(3){animation-delay:0.4s;}
-@keyframes blink{0%,100%{opacity:0.3;}50%{opacity:1;}}
+  :root {
+    --bg: #0b0d12;
+    --panel: #14171f;
+    --accent: #5b8cff;
+    --accent2: #ff5b7a;
+    --text: #e8eaf0;
+    --muted: #8a90a3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+  }
+  h1 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  p.sub {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0 0 18px;
+    text-align: center;
+    max-width: 480px;
+  }
+  .stage {
+    position: relative;
+    width: min(92vw, 480px);
+    aspect-ratio: 3 / 4;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    border: 1px solid #23273266;
+  }
+  canvas#output {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .status {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.2s;
+  }
+  .status.found .dot { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+  .status.searching .dot { background: #f59e0b; }
+  .rec-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: var(--accent2);
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+  .rec-badge.show { display: flex; }
+  .rec-badge .pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #fff;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    width: min(92vw, 480px);
+  }
+  button {
+    flex: 1 1 auto;
+    min-width: 120px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    color: #fff;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  #startBtn { background: var(--accent); }
+  #captureBtn { background: #2a2f3d; }
+  #recordBtn { background: #2a2f3d; }
+  #recordBtn.recording { background: var(--accent2); }
+  #zoomRow {
+    width: min(92vw, 480px);
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  #zoomRow input[type=range] { flex: 1; accent-color: var(--accent); }
+  .msg {
+    margin-top: 14px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+    max-width: 480px;
+    min-height: 1.2em;
+  }
+  a.dl-link { color: var(--accent); }
 </style>
 </head>
 <body>
-<header><div class="logo">E</div>EzzyAi — Offline Science Helper</header>
-<main><div id="chat"></div></main>
-<footer>
-  <input id="input" type="text" placeholder="Ask EzzyAi..." autocomplete="off" />
-  <button id="send">Ask</button>
-</footer>
+
+<h1>Face-Tracking Camera</h1>
+<p class="sub">Front camera, auto-zoomed and centered on your face. Preview and captures are true-to-life (not mirrored) — what you record is what others see.</p>
+
+<div class="stage">
+  <canvas id="output"></canvas>
+  <div class="status searching" id="statusBadge"><span class="dot"></span><span id="statusText">Camera off</span></div>
+  <div class="rec-badge" id="recBadge"><span class="pulse"></span>REC</div>
+</div>
+
+<div id="zoomRow">
+  <span>Zoom</span>
+  <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="3" />
+  <span id="zoomVal">3.0x</span>
+</div>
+
+<div class="controls">
+  <button id="startBtn">Start Camera</button>
+  <button id="captureBtn" disabled>📸 Capture Photo</button>
+  <button id="recordBtn" disabled>⏺ Record Video</button>
+</div>
+
+<div class="msg" id="msg"></div>
+
+<!-- Hidden source video (raw, non-mirrored feed) -->
+<video id="sourceVideo" playsinline muted style="display:none"></video>
+
+<!-- MediaPipe Face Detection -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/face_detection.js" crossorigin="anonymous"></script>
 
 <script>
-const DATA=[
-  {q:"what is work",a:"Work = Force × displacement in direction of force. Unit: Joule (J)."},
-  {q:"what is power",a:"Power is the rate of doing work. Power = Work / Time. Unit: Watt (W)."},
-  {q:"what is energy",a:"Energy is the capacity to do work. It exists as kinetic, potential, or other forms."},
-  {q:"what is ohm's law",a:"Ohm’s Law: Voltage = Current × Resistance (V = I × R)."},
-  {q:"what is photosynthesis",a:"Photosynthesis: Plants use sunlight, CO₂, and water to make glucose + oxygen."},
-];
-const chat=document.getElementById('chat');
-const input=document.getElementById('input');
-const send=document.getElementById('send');
+(function () {
+  const video = document.getElementById('sourceVideo');
+  const canvas = document.getElementById('output');
+  const ctx = canvas.getContext('2d');
+  const startBtn = document.getElementById('startBtn');
+  const captureBtn = document.getElementById('captureBtn');
+  const recordBtn = document.getElementById('recordBtn');
+  const statusBadge = document.getElementById('statusBadge');
+  const statusText = document.getElementById('statusText');
+  const recBadge = document.getElementById('recBadge');
+  const msg = document.getElementById('msg');
+  const zoomSlider = document.getElementById('zoomSlider');
+  const zoomVal = document.getElementById('zoomVal');
 
-function msg(txt,cls){
-  const d=document.createElement('div');
-  d.className='msg '+cls;
-  d.innerHTML=txt;
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
-}
+  let zoom = parseFloat(zoomSlider.value);
+  let stream = null;
+  let faceDetection = null;
+  let running = false;
+  let lastDetectionTime = 0;
 
-function typing(){
-  const d=document.createElement('div');
-  d.className='msg bot typing';
-  d.innerHTML='<div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
-  chat.appendChild(d);
-  chat.scrollTop=chat.scrollHeight;
-  return d;
-}
+  // Smoothed crop center, normalized 0..1 (relative to source video frame)
+  let smoothX = 0.5, smoothY = 0.42; // slightly above vertical center by default (typical face position)
+  let targetX = 0.5, targetY = 0.42;
+  let haveFace = false;
+  const SMOOTH = 0.12; // follow speed (0..1, higher = snappier)
 
-function findAnswer(q){
-  q=q.toLowerCase();
-  for(const i of DATA){if(i.q.includes(q)||q.includes(i.q))return i.a;}
-  return "Sorry, I don’t know that yet. Try another topic like energy or acid.";
-}
+  let recorder = null;
+  let recordedChunks = [];
+  let canvasStream = null;
 
-async function ask(){
-  const q=input.value.trim();
-  if(!q)return;
-  msg("<strong>You:</strong> "+q,'user');
-  input.value='';
-  const t=typing();
-  await new Promise(r=>setTimeout(r,600));
-  t.remove();
-  const a=findAnswer(q);
-  msg("<strong>EzzyAi:</strong> "+a,'bot');
-}
-send.onclick=ask;
-input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ask();}});
-msg("<strong>Hello, I'm EzzyAi!</strong><br>Ask me any 9th Std Science question — I work offline 🧠",'bot');
+  zoomSlider.addEventListener('input', () => {
+    zoom = parseFloat(zoomSlider.value);
+    zoomVal.textContent = zoom.toFixed(1) + 'x';
+  });
+
+  function setStatus(state, text) {
+    statusBadge.classList.remove('found', 'searching');
+    if (state) statusBadge.classList.add(state);
+    statusText.textContent = text;
+  }
+
+  async function initFaceDetection() {
+    faceDetection = new FaceDetection({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/${file}`,
+    });
+    faceDetection.setOptions({
+      model: 'short',
+      minDetectionConfidence: 0.5,
+    });
+    faceDetection.onResults(onFaceResults);
+    await faceDetection.initialize();
+  }
+
+  function onFaceResults(results) {
+    lastDetectionTime = performance.now();
+    if (results.detections && results.detections.length > 0) {
+      // Pick the largest face if multiple
+      let best = results.detections[0];
+      let bestArea = 0;
+      for (const d of results.detections) {
+        const bb = d.boundingBox;
+        const area = bb.width * bb.height;
+        if (area > bestArea) { bestArea = area; best = d; }
+      }
+      const bb = best.boundingBox; // xCenter, yCenter normalized 0..1, NOT mirrored
+      targetX = bb.xCenter;
+      targetY = bb.yCenter;
+      haveFace = true;
+    } else {
+      haveFace = false;
+    }
+  }
+
+  async function startCamera() {
+    startBtn.disabled = true;
+    msg.textContent = 'Requesting camera permission…';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
+        audio: false,
+      });
+    } catch (err) {
+      msg.textContent = 'Could not access camera: ' + err.message +
+        ' (camera access requires HTTPS or localhost).';
+      startBtn.disabled = false;
+      return;
+    }
+
+    video.srcObject = stream;
+    await video.play();
+
+    // Size canvas to a 3:4 portrait output based on the source video
+    const vw = video.videoWidth || 1280;
+    const vh = video.videoHeight || 960;
+    // Use the source's native resolution as our working canvas resolution,
+    // cropped to a 3:4 portrait if the source is wider.
+    const targetAspect = 3 / 4;
+    let outW = vh * targetAspect;
+    let outH = vh;
+    if (outW > vw) { outW = vw; outH = vw / targetAspect; }
+    canvas.width = Math.round(outW);
+    canvas.height = Math.round(outH);
+
+    msg.textContent = '';
+    setStatus('searching', 'Searching for face…');
+    captureBtn.disabled = false;
+    recordBtn.disabled = false;
+
+    if (!faceDetection) {
+      await initFaceDetection();
+    }
+
+    running = true;
+    requestAnimationFrame(renderLoop);
+    detectLoop();
+  }
+
+  async function detectLoop() {
+    if (!running) return;
+    if (video.readyState >= 2) {
+      await faceDetection.send({ image: video });
+    }
+    // Throttle detection to ~10fps for performance; render loop stays smooth
+    setTimeout(detectLoop, 100);
+  }
+
+  function renderLoop() {
+    if (!running) return;
+
+    // If we haven't seen a detection recently, gently drift back toward center
+    const sinceDetection = performance.now() - lastDetectionTime;
+    if (sinceDetection > 2000) {
+      haveFace = false;
+    }
+    setStatus(haveFace ? 'found' : 'searching', haveFace ? 'Face locked' : 'Searching for face…');
+
+    // Smoothly follow the target
+    smoothX += (targetX - smoothX) * SMOOTH;
+    smoothY += (targetY - smoothY) * SMOOTH;
+
+    drawFrame();
+    requestAnimationFrame(renderLoop);
+  }
+
+  function drawFrame() {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return;
+
+    // Crop region size in source pixels, based on zoom factor.
+    // zoom=1 shows the full frame height; zoom=3 shows 1/3 of it, etc.
+    const cropH = vh / zoom;
+    const cropW = cropH * (canvas.width / canvas.height);
+
+    // Center of crop in source pixel coordinates
+    let cx = smoothX * vw;
+    let cy = smoothY * vh;
+
+    let sx = cx - cropW / 2;
+    let sy = cy - cropH / 2;
+
+    // Clamp within source bounds
+    sx = Math.max(0, Math.min(vw - cropW, sx));
+    sy = Math.max(0, Math.min(vh - cropH, sy));
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // IMPORTANT: no horizontal flip here — this preserves a true,
+    // non-mirrored capture (what a viewer facing you would see).
+    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+  }
+
+  captureBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = `face-capture-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  recordBtn.addEventListener('click', () => {
+    if (recorder && recorder.state === 'recording') {
+      recorder.stop();
+      return;
+    }
+    startRecording();
+  });
+
+  function startRecording() {
+    canvasStream = canvas.captureStream(30);
+    recordedChunks = [];
+
+    let mimeType = 'video/webm;codecs=vp9';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+
+    recorder = new MediaRecorder(canvasStream, { mimeType });
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `face-recording-${Date.now()}.webm`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      recBadge.classList.remove('show');
+      recordBtn.classList.remove('recording');
+      recordBtn.textContent = '⏺ Record Video';
+    };
+    recorder.start();
+    recBadge.classList.add('show');
+    recordBtn.classList.add('recording');
+    recordBtn.textContent = '⏹ Stop Recording';
+  }
+
+  startBtn.addEventListener('click', startCamera);
+
+  window.addEventListener('beforeunload', () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  });
+})();
 </script>
+
 </body>
 </html>
