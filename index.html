@@ -3,143 +3,79 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Face-Tracking Camera (Gesture Zoom, Non-Mirrored, 60FPS Export)</title>
+<title>Face-Tracking Camera (Hand Skeleton, Gesture Zoom, 60FPS Export)</title>
 <style>
   :root {
-    --bg: #0b0d12;
-    --panel: #14171f;
-    --panel2: #1b1f2a;
-    --accent: #5b8cff;
-    --accent2: #ff5b7a;
-    --accent3: #4ade80;
-    --text: #e8eaf0;
-    --muted: #8a90a3;
+    --bg: #0b0d12; --panel: #14171f; --panel2: #1b1f2a;
+    --accent: #5b8cff; --accent2: #ff5b7a; --accent3: #4ade80;
+    --text: #e8eaf0; --muted: #8a90a3;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0;
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 24px 16px 60px;
+    display: flex; flex-direction: column; align-items: center; padding: 24px 16px 60px;
   }
   h1 { font-size: 1.15rem; font-weight: 600; margin: 0 0 4px; }
-  p.sub {
-    color: var(--muted); font-size: 0.85rem; margin: 0 0 18px;
-    text-align: center; max-width: 480px;
-  }
+  p.sub { color: var(--muted); font-size: 0.85rem; margin: 0 0 18px; text-align: center; max-width: 480px; }
   .stage {
-    position: relative;
-    width: min(92vw, 480px);
-    aspect-ratio: 3 / 4;
-    background: #000;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-    border: 1px solid #23273266;
+    position: relative; width: min(92vw, 480px); aspect-ratio: 3 / 4; background: #000;
+    border-radius: 16px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.5); border: 1px solid #23273266;
   }
   canvas#output { width: 100%; height: 100%; display: block; }
-  .badge-row {
-    position: absolute; top: 12px; left: 12px; right: 12px;
-    display: flex; justify-content: space-between; gap: 8px; pointer-events: none;
-  }
+  .badge-row { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
   .badge-col { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
   .badge-col.right { align-items: flex-end; }
   .status, .gesture-badge, .zoom-badge {
     padding: 5px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
-    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
-    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); display: flex; align-items: center; gap: 6px; white-space: nowrap;
   }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 0.2s; }
   .status.found .dot { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
   .status.searching .dot { background: #f59e0b; }
   .status.off .dot { background: var(--muted); }
-  .gesture-badge .fist-bar {
-    width: 50px; height: 6px; border-radius: 3px; background: #333; overflow: hidden; position: relative;
-  }
-  .gesture-badge .fist-fill {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    transition: width 0.05s linear;
-  }
-  .rec-badge {
-    padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
-    background: var(--accent2); display: none; align-items: center; gap: 6px;
-  }
+  .gesture-badge .fist-bar { width: 50px; height: 6px; border-radius: 3px; background: #333; overflow: hidden; position: relative; }
+  .gesture-badge .fist-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.05s linear; }
+  .rec-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; background: var(--accent2); display: none; align-items: center; gap: 6px; }
   .rec-badge.show { display: flex; }
   .rec-badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-  .panel {
-    width: min(92vw, 480px);
-    margin-top: 16px;
-    background: var(--panel);
-    border: 1px solid #23273266;
-    border-radius: 14px;
-    padding: 14px 16px;
-  }
-  .panel h2 {
-    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;
-    color: var(--muted); margin: 0 0 10px; font-weight: 700;
-  }
-  .row {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; padding: 7px 0; font-size: 0.85rem;
-  }
+  .panel { width: min(92vw, 480px); margin-top: 16px; background: var(--panel); border: 1px solid #23273266; border-radius: 14px; padding: 14px 16px; }
+  .panel h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0 0 10px; font-weight: 700; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; font-size: 0.85rem; }
   .row + .row { border-top: 1px solid #23273255; }
   .row .label { display: flex; flex-direction: column; }
   .row .hint { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
   .row input[type=range] { width: 140px; accent-color: var(--accent); }
-  select {
-    background: var(--panel2); color: var(--text); border: 1px solid #2d3242;
-    border-radius: 8px; padding: 6px 10px; font-size: 0.82rem;
-  }
+  select { background: var(--panel2); color: var(--text); border: 1px solid #2d3242; border-radius: 8px; padding: 6px 10px; font-size: 0.82rem; }
 
-  /* Toggle switch */
   .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .slider-toggle {
-    position: absolute; cursor: pointer; inset: 0; background: #2d3242;
-    border-radius: 24px; transition: 0.2s;
-  }
-  .slider-toggle:before {
-    content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
-    background: #fff; border-radius: 50%; transition: 0.2s;
-  }
+  .slider-toggle { position: absolute; cursor: pointer; inset: 0; background: #2d3242; border-radius: 24px; transition: 0.2s; }
+  .slider-toggle:before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
   input:checked + .slider-toggle { background: var(--accent); }
   input:checked + .slider-toggle:before { transform: translateX(20px); }
 
   .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 16px; width: min(92vw, 480px); }
-  button {
-    flex: 1 1 auto; min-width: 120px; padding: 12px 16px; border-radius: 12px; border: none;
-    font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; color: #fff;
-  }
+  button { flex: 1 1 auto; min-width: 120px; padding: 12px 16px; border-radius: 12px; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; color: #fff; }
   button:active { transform: scale(0.97); }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   #startBtn { background: var(--accent); }
-  #captureBtn, #exportBtn { background: #2a2f3d; }
+  #captureBtn { background: #2a2f3d; }
   #recordBtn { background: #2a2f3d; }
   #recordBtn.recording { background: var(--accent2); }
 
-  .export-progress {
-    width: 100%; height: 8px; background: #2a2f3d; border-radius: 4px; overflow: hidden;
-    margin-top: 10px; display: none;
-  }
-  .export-progress.show { display: block; }
-  .export-progress .fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.15s; }
-
   .msg { margin-top: 14px; font-size: 0.8rem; color: var(--muted); text-align: center; max-width: 480px; min-height: 1.2em; }
   .stats { margin-top: 8px; font-size: 0.72rem; color: var(--muted); text-align: center; max-width: 480px; }
+  .limits { margin-top: 10px; font-size: 0.7rem; color: var(--muted); text-align: left; max-width: 480px; line-height: 1.5; }
+  .limits summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 </style>
 </head>
 <body>
 
 <h1>Face-Tracking Camera</h1>
-<p class="sub">Front camera, auto-zoomed and centered on your face. Close your fist to zoom in, open your palm to zoom out. Preview and exports are non-mirrored — true to how others see you.</p>
+<p class="sub">Front camera, auto-zoomed and centered on your face. Open palm → fist zooms in progressively; open it back up to zoom out. Preview and exports are non-mirrored.</p>
 
 <div class="stage">
   <canvas id="output"></canvas>
@@ -153,7 +89,7 @@
     </div>
     <div class="badge-col right">
       <div class="rec-badge" id="recBadge"><span class="pulse"></span>REC</div>
-      <div class="zoom-badge" id="zoomBadge" style="display:none">Zoom <span id="zoomBadgeVal">1.0x</span></div>
+      <div class="zoom-badge" id="zoomBadge" style="display:none">Zoom <span id="zoomBadgeVal">1.0x</span> · <span id="zoomPct">0%</span></div>
     </div>
   </div>
 </div>
@@ -165,15 +101,19 @@
     <label class="switch"><input type="checkbox" id="faceTrackToggle" checked><span class="slider-toggle"></span></label>
   </div>
   <div class="row">
-    <div class="label"><span>Palm Gesture Zoom</span><span class="hint">Fist = zoom in, open palm = zoom out</span></div>
+    <div class="label"><span>Palm Gesture Zoom</span><span class="hint">Open palm → fist controls zoom</span></div>
     <label class="switch"><input type="checkbox" id="gestureToggle" checked><span class="slider-toggle"></span></label>
+  </div>
+  <div class="row">
+    <div class="label"><span>Hand Landmarks Overlay</span><span class="hint">Draw the 21-point hand skeleton</span></div>
+    <label class="switch"><input type="checkbox" id="landmarkToggle" checked><span class="slider-toggle"></span></label>
   </div>
   <div class="row">
     <div class="label"><span>Manual Zoom</span><span class="hint">Used when gesture zoom is off</span></div>
     <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="2" />
   </div>
   <div class="row">
-    <div class="label"><span>Gesture Sensitivity</span><span class="hint">Higher = less hand motion needed</span></div>
+    <div class="label"><span>Gesture Sensitivity</span><span class="hint">Higher = less finger curl needed</span></div>
     <input type="range" id="sensSlider" min="0.5" max="2" step="0.05" value="1" />
   </div>
   <div class="row">
@@ -210,9 +150,20 @@
   <button id="recordBtn" disabled>⏺ Record Video</button>
 </div>
 
-<div class="export-progress" id="exportProgress"><div class="fill" id="exportFill"></div></div>
 <div class="msg" id="msg"></div>
 <div class="stats" id="stats"></div>
+
+<details class="limits">
+  <summary>Platform notes</summary>
+  <div style="margin-top:6px;">
+    The preview/export here is intentionally <strong>not mirrored</strong>. MediaPipe Hands'
+    Left/Right label is calibrated for a mirrored selfie view, so on this non-mirrored feed the
+    reported label may read opposite to the hand's actual anatomical side — it's shown as reported
+    by the model, with that caveat. Export uses the browser's MediaRecorder/WebM pipeline (not a
+    frame-exact WebCodecs muxer), so "60 FPS" reflects a genuine 60fps capture request plus the
+    actually-measured frame rate reported after recording, rather than a guaranteed bit-exact CFR file.
+  </div>
+</details>
 
 <!-- Hidden source video (raw, non-mirrored feed) -->
 <video id="sourceVideo" playsinline muted style="display:none"></video>
@@ -237,29 +188,30 @@
   const fistFill = document.getElementById('fistFill');
   const zoomBadge = document.getElementById('zoomBadge');
   const zoomBadgeVal = document.getElementById('zoomBadgeVal');
+  const zoomPct = document.getElementById('zoomPct');
   const recBadge = document.getElementById('recBadge');
   const msg = document.getElementById('msg');
   const stats = document.getElementById('stats');
 
   const faceTrackToggle = document.getElementById('faceTrackToggle');
   const gestureToggle = document.getElementById('gestureToggle');
+  const landmarkToggle = document.getElementById('landmarkToggle');
   const zoomSlider = document.getElementById('zoomSlider');
   const sensSlider = document.getElementById('sensSlider');
   const minZoomSlider = document.getElementById('minZoomSlider');
   const maxZoomSlider = document.getElementById('maxZoomSlider');
   const fpsSelect = document.getElementById('fpsSelect');
   const qualitySelect = document.getElementById('qualitySelect');
-  const exportProgress = document.getElementById('exportProgress');
-  const exportFill = document.getElementById('exportFill');
 
   // ---------- State ----------
   let stream = null;
   let running = false;
   let faceTrackingEnabled = true;
   let gestureZoomEnabled = true;
+  let showLandmarks = true;
 
-  let zoom = parseFloat(zoomSlider.value);        // active zoom (manual or gesture-driven)
-  let manualZoom = zoom;                           // last manual slider value, used as fallback/default
+  let zoom = parseFloat(zoomSlider.value);
+  let manualZoom = zoom;
   let minZoom = parseFloat(minZoomSlider.value);
   let maxZoom = parseFloat(maxZoomSlider.value);
   let sensitivity = parseFloat(sensSlider.value);
@@ -270,21 +222,23 @@
   let haveFace = false;
   let smoothX = 0.5, smoothY = 0.42;
   let targetX = 0.5, targetY = 0.42;
-  let lastFaceCenter = null; // for sticky face selection
+  let lastFaceCenter = null;
   const FACE_SMOOTH = 0.14;
 
   // Hand gesture
   let handDetector = null;
   let lastHandDetectionTime = 0;
   let haveHand = false;
-  let fistAmountRaw = 0;     // 0 = open, 1 = closed fist
+  let fistAmountRaw = 0;       // 0 = open, 1 = closed fist (angle-based, continuous)
   let fistAmountSmooth = 0;
   let lastStableFist = 0;
+  let currentLandmarks = null; // latest raw landmarks (normalized to detectCanvas frame)
+  let currentHandedness = '—';
+  let gestureLabel = 'Open Palm';
+  let lastGestureLabel = 'Open Palm';
+  let gestureLabelHoldUntil = 0;
   const GESTURE_SMOOTH = 0.18;
-  const DEAD_ZONE = 0.03;
-  // Calibration window for the extension metric (tune-able via sensitivity)
-  const EXT_FIST_BASE = 1.05;
-  const EXT_OPEN_BASE = 2.35;
+  const DEAD_ZONE = 0.025;
 
   // Recording / export
   let recorder = null;
@@ -295,16 +249,28 @@
   let framesDrawn = 0;
 
   // Performance adaptation
-  let frameTimes = [];
-  let detectIntervalMs = 100; // face+hand detection cadence, adapts under load
+  let detectIntervalMs = 100;
   const MIN_DETECT_INTERVAL = 66;
   const MAX_DETECT_INTERVAL = 220;
 
-  // Downscaled offscreen canvas used as detector input (keeps detection cheap
-  // regardless of camera capture resolution).
+  // Downscaled offscreen canvas used as detector input
   const detectCanvas = document.createElement('canvas');
   const detectCtx = detectCanvas.getContext('2d', { willReadFrequently: true });
   const DETECT_MAX_DIM = 480;
+
+  // Current crop rectangle (video-pixel space), updated each drawFrame(), used to
+  // project hand landmarks onto the zoomed output canvas correctly.
+  let lastCrop = null;
+
+  // 21-point MediaPipe hand connections (skeleton)
+  const HAND_CONNECTIONS = [
+    [0,1],[1,2],[2,3],[3,4],           // thumb
+    [0,5],[5,6],[6,7],[7,8],           // index
+    [5,9],[9,10],[10,11],[11,12],      // middle
+    [9,13],[13,14],[14,15],[15,16],    // ring
+    [13,17],[17,18],[18,19],[19,20],   // pinky
+    [0,17],                            // palm base
+  ];
 
   // ---------- UI wiring ----------
   faceTrackToggle.addEventListener('change', () => {
@@ -316,6 +282,7 @@
     gestureBadge.style.display = gestureZoomEnabled ? 'flex' : 'none';
     if (!gestureZoomEnabled) zoom = manualZoom;
   });
+  landmarkToggle.addEventListener('change', () => { showLandmarks = landmarkToggle.checked; });
   zoomSlider.addEventListener('input', () => {
     manualZoom = parseFloat(zoomSlider.value);
     if (!gestureZoomEnabled) zoom = manualZoom;
@@ -352,7 +319,7 @@
     });
     handDetector.setOptions({
       maxNumHands: 1,
-      modelComplexity: 0,          // lighter model for real-time mobile performance
+      modelComplexity: 0,
       minDetectionConfidence: 0.6,
       minTrackingConfidence: 0.5,
     });
@@ -368,14 +335,12 @@
 
     let chosen = null;
     if (lastFaceCenter) {
-      // Sticky selection: prefer the face closest to the previously tracked one
       let bestDist = Infinity;
       for (const d of dets) {
         const bb = d.boundingBox;
-        const dist = Math.hypot(bb.xCenter - lastFaceCenter.x, bb.yCenter - lastFaceCenter.y);
-        if (dist < bestDist) { bestDist = dist; chosen = d; }
+        const dd = Math.hypot(bb.xCenter - lastFaceCenter.x, bb.yCenter - lastFaceCenter.y);
+        if (dd < bestDist) { bestDist = dd; chosen = d; }
       }
-      // If the closest match jumped too far, fall back to the largest face (re-acquire)
       if (bestDist > 0.35) chosen = null;
     }
     if (!chosen) {
@@ -386,41 +351,64 @@
         if (area > bestArea) { bestArea = area; chosen = d; }
       }
     }
-
-    const bb = chosen.boundingBox; // normalized, not mirrored
-    targetX = bb.xCenter;
-    targetY = bb.yCenter;
+    const bb = chosen.boundingBox;
+    targetX = bb.xCenter; targetY = bb.yCenter;
     lastFaceCenter = { x: bb.xCenter, y: bb.yCenter };
     haveFace = true;
   }
 
-  // ---------- Hand results ----------
-  function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  // ---------- Hand results: angle-based finger curl ----------
+  function vec(a, b) { return { x: b.x - a.x, y: b.y - a.y }; }
+  function angleBetween(v1, v2) {
+    const m1 = Math.hypot(v1.x, v1.y), m2 = Math.hypot(v2.x, v2.y);
+    if (m1 < 1e-6 || m2 < 1e-6) return 0;
+    let cos = (v1.x * v2.x + v1.y * v2.y) / (m1 * m2);
+    cos = Math.max(-1, Math.min(1, cos));
+    return Math.acos(cos); // 0 = straight, PI = fully folded back
+  }
+  // Curl of one finger from its MCP/PIP/DIP/TIP joints: compares the
+  // proximal segment direction (MCP->PIP) to the distal segment direction
+  // (DIP->TIP). A straight finger has both segments pointing the same way
+  // (curl ~0); a curled finger folds the distal segment back (curl ~1).
+  function fingerCurl(lm, mcp, pip, dip, tip) {
+    const v1 = vec(lm[mcp], lm[pip]);
+    const v2 = vec(lm[dip], lm[tip]);
+    const angle = angleBetween(v1, v2);
+    return Math.max(0, Math.min(1, angle / (Math.PI * 0.78)));
+  }
 
-  function computeOpenness(landmarks) {
-    const wrist = landmarks[0];
-    const palmRef = landmarks[9]; // middle finger MCP
-    const palmSize = Math.max(0.0001, dist(wrist, palmRef));
-    const tips = [8, 12, 16, 20]; // index, middle, ring, pinky tips
-    let sum = 0;
-    for (const i of tips) sum += dist(landmarks[i], wrist) / palmSize;
-    const extension = sum / tips.length;
+  function computeFistAmount(lm) {
+    const index  = fingerCurl(lm, 5, 6, 7, 8);
+    const middle = fingerCurl(lm, 9, 10, 11, 12);
+    const ring   = fingerCurl(lm, 13, 14, 15, 16);
+    const pinky  = fingerCurl(lm, 17, 18, 19, 20);
+    const thumb  = fingerCurl(lm, 2, 3, 3, 4); // thumb has one fewer joint; reuse IP as both pip/dip anchor
 
-    // Sensitivity narrows/widens the calibration window around the base values
-    const span = (EXT_OPEN_BASE - EXT_FIST_BASE) / sensitivity;
-    const lo = EXT_FIST_BASE;
-    const hi = EXT_FIST_BASE + span;
-    const norm = Math.max(0, Math.min(1, (extension - lo) / (hi - lo)));
-    return 1 - norm; // 0 = open, 1 = fist
+    // Four fingers carry most of the signal; thumb contributes less (it curls
+    // less distinctly than the other fingers in a natural fist).
+    let raw = (index + middle + ring + pinky) * 0.22 + thumb * 0.12;
+    raw = Math.max(0, Math.min(1, raw));
+
+    // Sensitivity re-scales the effective curl range before clamping.
+    const scaled = Math.max(0, Math.min(1, raw * sensitivity));
+    return scaled;
+  }
+
+  function classifyGesture(amount) {
+    if (amount < 0.3) return 'Open Palm';
+    if (amount < 0.7) return 'Partially Closed';
+    return 'Fist';
   }
 
   function onHandResults(results) {
     lastHandDetectionTime = performance.now();
     const list = results.multiHandLandmarks || [];
-    if (list.length === 0) { haveHand = false; return; }
-    // Works for either hand — the geometry-based openness metric is
-    // orientation/handedness agnostic.
-    fistAmountRaw = computeOpenness(list[0]);
+    const handed = results.multiHandedness || [];
+    if (list.length === 0) { haveHand = false; currentLandmarks = null; return; }
+
+    currentLandmarks = list[0];
+    currentHandedness = handed.length ? handed[0].label : '—';
+    fistAmountRaw = computeFistAmount(currentLandmarks);
     haveHand = true;
   }
 
@@ -454,8 +442,7 @@
     video.srcObject = stream;
     await video.play();
 
-    const vw = video.videoWidth || 1280;
-    const vh = video.videoHeight || 960;
+    const vw = video.videoWidth || 1280, vh = video.videoHeight || 960;
     const targetAspect = 3 / 4;
     let outW = vh * targetAspect, outH = vh;
     if (outW > vw) { outW = vw; outH = vw / targetAspect; }
@@ -490,9 +477,6 @@
       if (gestureZoomEnabled) await handDetector.send({ image: detectCanvas });
     }
     const elapsed = performance.now() - t0;
-
-    // Adaptive cadence: if detection is taking a while relative to our interval,
-    // back off; if it's fast and interval has crept up, ease it back down.
     if (elapsed > detectIntervalMs * 0.8) {
       detectIntervalMs = Math.min(MAX_DETECT_INTERVAL, detectIntervalMs + 15);
     } else if (detectIntervalMs > MIN_DETECT_INTERVAL) {
@@ -503,14 +487,6 @@
 
   function renderLoop(now) {
     if (!running) return;
-
-    if (frameTimes.length > 0) {
-      const dt = now - frameTimes[frameTimes.length - 1];
-      frameTimes.push(now);
-      if (frameTimes.length > 60) frameTimes.shift();
-    } else {
-      frameTimes.push(now);
-    }
 
     // ----- Face tracking -----
     if (faceTrackingEnabled) {
@@ -524,33 +500,48 @@
       smoothY += (0.42 - smoothY) * FACE_SMOOTH;
     }
 
-    // ----- Gesture zoom -----
+    // ----- Gesture zoom (independent of face tracking; face only supplies the target) -----
     if (gestureZoomEnabled) {
       const handFresh = (now - lastHandDetectionTime) < 600;
       if (handFresh && haveHand) {
         if (Math.abs(fistAmountRaw - lastStableFist) > DEAD_ZONE) {
           lastStableFist = fistAmountRaw;
         }
-        gestureText.textContent = 'Hand: tracking';
       } else {
-        // Hold last stable value briefly, then relax back toward a neutral
-        // (half-open) position so the view doesn't stay stuck zoomed in.
         const sinceHand = now - lastHandDetectionTime;
-        if (sinceHand > 500) {
-          lastStableFist += (0 - lastStableFist) * 0.02;
-        }
-        gestureText.textContent = handFresh ? 'Hand: —' : 'Hand: not in frame';
+        // Occlusion/brief disappearance: hold position, do NOT snap to max zoom.
+        if (sinceHand > 500) lastStableFist += (0 - lastStableFist) * 0.02;
       }
       fistAmountSmooth += (lastStableFist - fistAmountSmooth) * GESTURE_SMOOTH;
       fistFill.style.width = (fistAmountSmooth * 100).toFixed(0) + '%';
+
+      // Hysteresis on the discrete label only, so it doesn't flicker near
+      // the 0.3 / 0.7 boundaries while the continuous zoom keeps updating smoothly.
+      const proposed = classifyGesture(fistAmountSmooth);
+      if (proposed !== lastGestureLabel) {
+        if (now > gestureLabelHoldUntil) {
+          lastGestureLabel = proposed;
+          gestureLabelHoldUntil = now + 180;
+        }
+      }
+      gestureLabel = lastGestureLabel;
+
+      const handLabel = haveHand ? (currentHandedness === 'Left' ? 'Right' : currentHandedness === 'Right' ? 'Left' : currentHandedness) : '—';
+      gestureText.textContent = handFresh ? `${handLabel}: ${gestureLabel}` : 'Hand: not in frame';
+
       const targetZoom = minZoom + fistAmountSmooth * (maxZoom - minZoom);
       zoom += (targetZoom - zoom) * 0.15;
     } else {
       zoom += (manualZoom - zoom) * 0.2;
     }
     zoomBadgeVal.textContent = zoom.toFixed(1) + 'x';
+    const pct = maxZoom > minZoom ? ((zoom - minZoom) / (maxZoom - minZoom)) * 100 : 0;
+    zoomPct.textContent = Math.round(Math.max(0, Math.min(100, pct))) + '%';
 
     drawFrame();
+    if (showLandmarks && gestureZoomEnabled && currentLandmarks && (now - lastHandDetectionTime) < 600) {
+      drawHandOverlay(currentLandmarks);
+    }
     framesDrawn++;
     requestAnimationFrame(renderLoop);
   }
@@ -561,7 +552,6 @@
 
     const cropH = vh / zoom;
     const cropW = cropH * (canvas.width / canvas.height);
-
     let cx = smoothX * vw, cy = smoothY * vh;
     let sx = cx - cropW / 2, sy = cy - cropH / 2;
     sx = Math.max(0, Math.min(vw - cropW, sx));
@@ -569,8 +559,63 @@
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    // No horizontal flip — output is a true, non-mirrored capture.
     ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+    lastCrop = { sx, sy, cropW, cropH, vw, vh };
+  }
+
+  // Projects normalized (0..1) landmark coords — from the full, non-mirrored
+  // video frame — into the current zoomed/cropped output canvas space.
+  function projectToCanvas(lm) {
+    if (!lastCrop) return null;
+    const px = lm.x * lastCrop.vw, py = lm.y * lastCrop.vh;
+    const x = (px - lastCrop.sx) * (canvas.width / lastCrop.cropW);
+    const y = (py - lastCrop.sy) * (canvas.height / lastCrop.cropH);
+    return { x, y };
+  }
+
+  function drawHandOverlay(lm) {
+    const pts = lm.map(projectToCanvas).filter(Boolean);
+    if (pts.length !== 21) return;
+
+    // Connections
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,120,40,0.85)';
+    ctx.beginPath();
+    for (const [a, b] of HAND_CONNECTIONS) {
+      ctx.moveTo(pts[a].x, pts[a].y);
+      ctx.lineTo(pts[b].x, pts[b].y);
+    }
+    ctx.stroke();
+
+    // Landmark dots
+    ctx.fillStyle = 'rgba(255,60,20,0.95)';
+    for (const p of pts) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    const pad = 10;
+    ctx.strokeStyle = 'rgba(255,140,60,0.9)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(minX - pad, minY - pad, (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
+
+    // Label
+    const handLabel = currentHandedness === 'Left' ? 'Right' : currentHandedness === 'Right' ? 'Left' : currentHandedness;
+    const label = `${handLabel} · ${gestureLabel}`;
+    ctx.font = '600 12px -apple-system, Roboto, sans-serif';
+    const tw = ctx.measureText(label).width;
+    const lx = Math.max(4, minX - pad), ly = Math.max(14, minY - pad - 6);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(lx - 4, ly - 13, tw + 8, 18);
+    ctx.fillStyle = '#ff9a5c';
+    ctx.fillText(label, lx, ly);
   }
 
   // ---------- Capture / Record ----------
@@ -589,7 +634,7 @@
   function qualityBitrate(q) {
     if (q === 'low') return 4_000_000;
     if (q === 'high') return 12_000_000;
-    return 8_000_000; // med
+    return 8_000_000;
   }
 
   function startRecording() {
@@ -609,7 +654,7 @@
     });
     recorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
     recorder.onstop = finishRecording;
-    recorder.start(100); // collect chunks periodically for robustness
+    recorder.start(100);
 
     recordStartTime = performance.now();
     framesDrawn = 0;
@@ -636,11 +681,9 @@
     recordBtn.classList.remove('recording');
     recordBtn.textContent = '⏺ Record Video';
 
-    // Honest, measured readout rather than a blind "60 FPS" claim — this
-    // reflects what the render loop actually sustained during capture.
     const note = achievedFps >= targetFps * 0.95
       ? 'Sustained target frame rate.'
-      : `Device could not fully sustain ${targetFps} FPS under current load; frames were honestly captured at the achieved rate rather than duplicated to fake it.`;
+      : `Device could not fully sustain ${targetFps} FPS under current load; frames were honestly captured at the achieved rate, not duplicated to fake it.`;
     stats.textContent = `Recorded ${durationSec.toFixed(1)}s · ~${achievedFps.toFixed(1)} FPS actual (target ${targetFps}) · ${note}`;
   }
 
